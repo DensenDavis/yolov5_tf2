@@ -5,7 +5,7 @@ from config import Configuration
 cfg = Configuration()
 
 #Update the code without if condition
-def random_crop(image,labels,new_h=-1.0,new_w=-1.0):
+def random_crop(image,labels,new_h=-1,new_w=-1):
     """[Generates random crops of the Image]
 
     Args:
@@ -22,7 +22,7 @@ def random_crop(image,labels,new_h=-1.0,new_w=-1.0):
     org_h,org_w = shape[0],shape[1]
     boxes = tf.stack([boxes[:,0]*org_w,boxes[:,1]*org_h,boxes[:,2]*org_w,boxes[:,3]*org_h],axis=-1)
     boxes = convert_to_corners(boxes)
-    new_h,new_w = tf.cond(tf.logical_and(new_h !=-1.0,new_w !=-1.0),lambda:(new_h,new_w),lambda:(cfg.img_size[0],cfg.img_size[1]))
+    new_h,new_w = tf.cond(tf.logical_and(new_h !=-1,new_w !=-1),lambda:(new_h,new_w),lambda:(cfg.train_img_size,cfg.train_img_size))
     #Crop coordinate
     left = tf.random.uniform([],0, tf.cast(org_w,tf.int32) - tf.cast(new_w,tf.int32),tf.int32)
     right = left + tf.cast(new_w,tf.int32)
@@ -49,12 +49,12 @@ def random_crop(image,labels,new_h=-1.0,new_w=-1.0):
     new_boxes_2 = tf.minimum(new_boxes[..., 2:], crop[:,2:])
     new_boxes_2 = tf.stack([new_boxes_2[...,0]-crop[:,0],new_boxes_2[...,1]-crop[:,1]],axis=-1)
     new_boxes = tf.stack([new_boxes_1[:,0],new_boxes_1[:,1],new_boxes_2[:,0],new_boxes_2[:,1]],axis=-1)
-    new_boxes = new_boxes/tf.stack([new_w,new_h,new_w,new_h],axis=-1)
+    new_boxes = new_boxes/tf.cast(tf.stack([new_w,new_h,new_w,new_h],axis=-1), tf.float32)
     new_boxes = convert_to_xywh(new_boxes)
     return new_image, (new_boxes, new_labels)
 
 
-def flip_horizontal(image,labels):
+def flip_horizontal(image,bbox):
     """Flips the image and lables horizontally
     Args:
         image ([tf.float32]): [The image is of float32 with value range between 0-1]
@@ -64,14 +64,13 @@ def flip_horizontal(image,labels):
     Returns:
         [tf.float32,(tf.float32,tf.int32)]: [Returns the cropped image and corresponding labels normalised format and class ids]
     """    
-    bbox,cls_id = labels
     image = tf.image.flip_left_right(image)
     bbox = convert_to_corners(bbox)
     bbox = tf.stack([1-bbox[:, 2], bbox[:, 1], 1-bbox[:, 0], bbox[:, 3]],axis=-1)
     bbox = convert_to_xywh(bbox)
-    return image,(bbox,cls_id)
+    return image,bbox
 
-def flip_vertical(image,labels):
+def flip_vertical(image,bbox):
     """Flips the image and lables horizontally
     Args:
         image ([tf.float32]): [The image is of float32 with value range between 0-1]
@@ -81,12 +80,11 @@ def flip_vertical(image,labels):
     Returns:
         [tf.float32,(tf.float32,tf.int32)]: [Returns the cropped image and corresponding labels normalised format and class ids]
     """    
-    bbox,cls_id = labels
     image = tf.image.flip_up_down(image)
     bbox = convert_to_corners(bbox)
     bbox = tf.stack([bbox[:, 0], 1-bbox[:, 3], bbox[:, 2], 1-bbox[:, 1]],axis=-1)
     bbox = convert_to_xywh(bbox)
-    return image,(bbox,cls_id)
+    return image,bbox
 
 def image_rotate(image,angle):
     """A PIL(Pillow) object of the image is created PIL has the feature to rotate the
@@ -200,8 +198,8 @@ def cut_mix(images,labels):
     num_crops = 4
     bboxes,cls_ids = labels
     n_imgs = tf.shape(images)[0]
-    crop_h = 2*cfg.img_size[0]/num_crops  # 200 = img height
-    crop_w = 2*cfg.img_size[1]/num_crops  # 200 = img width
+    crop_h = 2*cfg.train_img_size/num_crops  # 200 = img height
+    crop_w = 2*cfg.train_img_size/num_crops  # 200 = img width
     norm_crop_dim = 1/(num_crops//2)
     mosaic_rows, final_boxes, final_cls_ids = [], [], []
     count = 0
@@ -283,8 +281,10 @@ def basic_augmentation(image,labels):
 
 
 def apply_augmentations(image, labels):
+    bbox,cls_id = tf.split(labels, (4,1), axis=-1)
     if cfg.augmentations["flip_horizontal"]:
-        image,labels = flip_horizontal(image,labels)
+        image,bbox = flip_horizontal(image,bbox)
     if cfg.augmentations["flip_vertical"]:
-        image,labels = flip_vertical(image,labels)  
+        image,bbox = flip_vertical(image,bbox)
+    labels = tf.concat([bbox,cls_id], axis=-1)
     return image, labels
