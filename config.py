@@ -1,4 +1,5 @@
 import os
+import numpy as np
 from datetime import datetime
 
 
@@ -6,36 +7,39 @@ class Configuration():
     def __init__(self):
 
         # dataset config
-        self.train_gt_path = 'ds/train/gt/*.png'
-        self.train_input_path = 'ds/train/input/*.png'
-        self.train_batch_size = 8
-        self.train_img_shape = [256, 256, 3]
-        self.train_augmentation = True
-        self.val_gt_path = 'ds/val/gt/*.png'
-        self.val_input_path = 'ds/val/input/*.png'
+        self.train_labels = 'ds/train/labels/*.txt'
+        self.train_images = 'ds/train/images/*.png'
+        self.train_batch_size = 2
+        self.train_img_size = 416
+        self.val_labels = 'ds/val/labels/*.txt'
+        self.val_images = 'ds/val/images/*.png'
         self.val_batch_size = 1
-        self.val_img_shape = [1024, 2048, 3]
+        self.val_img_size = 416
         self.val_augmentation = False
-        self.img_size = 416
-        self.num_classes = 80
-        self.num_anchors = 9
+        self.num_strides = 3
+        self.num_classes = 4
+        self.anchors_per_stride = 3
+        self.class_names = ["mobile", "person","cup","chair"]
 
         # Augmentations
         self.augmentations = {
             "mosaic":False,
             "mixup":False,
-            "flip_vertical":True,
-            "flip_horizontal":True,
+            "flip_vertical":False,
+            "flip_horizontal":False,
             "rotation_degree":0.0,
             "random_hue":0.5,
             "random_saturation":0.5,
             "random_value":0.5
         }
 
+        # yolo config
+        self.train_iou_threshold = 0.5
+
         # Anchors
         self.yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
                          (59, 119), (116, 90), (156, 198), (373, 326)],
-                        np.float32) / 416
+                        np.float32) / self.train_img_size
         self.yolo_anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
 
         # training config
@@ -47,12 +51,12 @@ class Configuration():
         self.weight_mse_loss = 1
 
         # visualization config
-        self.val_freq = 4             # frequency of validation - assign high value to accelerate training
-        self.display_frequency = 50   # frequency of printing sample predictions - must be a multiple of val_freq
+        self.val_freq = 2             # frequency of validation - assign high value to accelerate training
+        self.display_frequency = 2   # frequency of printing sample predictions - must be a multiple of val_freq
         self.display_samples = 5      # number of samples printed
         self.log_dir = os.path.join('logs', str(datetime.now().strftime("%d%m%Y-%H%M%S")))  # Tensorboard logging
 
         # Model config
         self.width = [0.50, 0.75, 1.0, 1.25]
         self.depth = [0.33, 0.67, 1.0, 1.33]
-        self.version = 's'
+        self.version = ['s','m','l','x']

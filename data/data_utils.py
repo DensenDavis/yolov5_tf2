@@ -36,18 +36,20 @@ def compute_iou(boxes1_corners, boxes2_corners):
     )
     return tf.clip_by_value(intersection_area/boxes2_area,0.0,1.0),tf.clip_by_value(intersection_area / union_area, 0.0,1.0)
 
-def zero_pad_bboxes(images,labels, max_count = 1000):
+def zero_pad_bboxes(images,labels, max_count = 100):
     bboxes, class_ids = labels
     box_mask = tf.zeros((max_count,4), tf.float32)
-    cls_id_mask = tf.zeros((max_count), tf.int32)-1
+    cls_id_mask = tf.zeros((max_count), tf.float32)-1.0
     new_boxes = tf.concat([bboxes,box_mask], axis=0)[:max_count]
     new_labels = tf.concat([class_ids,cls_id_mask], axis=0)[:max_count]
-    return images, (new_boxes, new_labels)
+    labels = tf.concat([new_boxes,new_labels], axis=-1)
+    return images, labels
 
-def zero_pad_bboxes_batch(images,labels, max_count = 1000):
+def zero_pad_bboxes_batch(images,labels, max_count = 100):
     bboxes, class_ids = labels
     box_mask = tf.zeros((tf.shape(images)[0],max_count,4), tf.float32)
-    cls_id_mask = tf.zeros((tf.shape(images)[0],max_count), tf.int32)-1
+    cls_id_mask = tf.zeros((tf.shape(images)[0],max_count), tf.float32)-1.0
     new_boxes = tf.concat([bboxes,box_mask], axis=1)[:,:max_count]
     new_labels = tf.concat([class_ids,cls_id_mask], axis=1)[:,:max_count]
-    return images, (new_boxes, new_labels)
+    labels = tf.concat([new_boxes,tf.expand_dims(new_labels,axis=-1)], axis=-1)
+    return images, labels
