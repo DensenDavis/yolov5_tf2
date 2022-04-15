@@ -21,6 +21,7 @@ class Dataset():
         self.val_ds = self.get_val_data()
 
     def decode_io_stream(self, image, label):
+        # label : string Tensor
         image = preprocessing.decode_images(image)
         labels = preprocessing.decode_labels(label)
         return image, labels

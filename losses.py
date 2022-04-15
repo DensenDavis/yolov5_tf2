@@ -46,7 +46,7 @@ class YOLOLoss(tf.losses.Loss):
         box_xy = tf.sigmoid(box_xy)
         objectness = tf.sigmoid(objectness)
         class_probs = tf.sigmoid(class_probs)
-        pred_box = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
+        pred_xywh = tf.concat((box_xy, box_wh), axis=-1)  # original xywh for loss
 
         # !!! grid[x][y] == (y, x)
         grid = self._meshgrid(grid_size[1],grid_size[0])
@@ -57,19 +57,20 @@ class YOLOLoss(tf.losses.Loss):
 
         box_x1y1 = box_xy - box_wh / 2
         box_x2y2 = box_xy + box_wh / 2
-        bbox = tf.concat([box_x1y1, box_x2y2], axis=-1)
+        pred_box = tf.concat([box_x1y1, box_x2y2], axis=-1)
 
-        return bbox, objectness, class_probs, pred_box
+        return pred_box, objectness, class_probs, pred_xywh
 
     def call(self, y_true, y_pred):
         # 1. transform all pred outputs
-        # y_pred: (batch_size, grid, grid, anchors, (x, y, w, h, obj, ...cls))
+        # y_true: (N, grid, grid, anchors, [x1, y1, x2, y2, , cls_0, cls_1, ...])
+        # y_pred: (N, grid, grid, anchors, [x, y, w, h, obj, cls_0, cls_1, ...])
         pred_box, pred_obj, pred_class, pred_xywh = self.yolo_boxes(y_pred, cfg.num_classes)
         pred_xy = pred_xywh[..., 0:2]
         pred_wh = pred_xywh[..., 2:4]
 
         # 2. transform all true outputs
-        # y_true: (batch_size, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
+        # y_true: (N, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
         true_box, true_obj, true_class_idx = tf.split(y_true, (4, 1, 1), axis=-1)
         true_xy = (true_box[..., 0:2] + true_box[..., 2:4]) / 2
         true_wh = true_box[..., 2:4] - true_box[..., 0:2]

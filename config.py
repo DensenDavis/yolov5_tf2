@@ -10,11 +10,11 @@ class Configuration():
         self.train_labels = 'ds/train/labels/*.txt'
         self.train_images = 'ds/train/images/*.png'
         self.train_batch_size = 2
-        self.train_img_size = 416
+        self.train_img_size = 960
         self.val_labels = 'ds/val/labels/*.txt'
         self.val_images = 'ds/val/images/*.png'
-        self.val_batch_size = 1
-        self.val_img_size = 416
+        self.val_batch_size = 2
+        self.val_img_size = 960
         self.val_augmentation = False
         self.num_strides = 3
         self.num_classes = 4
@@ -35,11 +35,13 @@ class Configuration():
 
         # yolo config
         self.train_iou_threshold = 0.5
+        self.val_iou_threshold = 0.1
+        self.max_dets = 1000
 
         # Anchors
         self.yolo_anchors = np.array([(10, 13), (16, 30), (33, 23), (30, 61), (62, 45),
                          (59, 119), (116, 90), (156, 198), (373, 326)],
-                        np.float32) / self.train_img_size
+                        np.float32) / self.train_img_size  # scale low to high
         self.yolo_anchor_masks = np.array([[6, 7, 8], [3, 4, 5], [0, 1, 2]])
 
         # training config
@@ -51,9 +53,9 @@ class Configuration():
         self.weight_mse_loss = 1
 
         # visualization config
-        self.val_freq = 2             # frequency of validation - assign high value to accelerate training
-        self.display_frequency = 2   # frequency of printing sample predictions - must be a multiple of val_freq
-        self.display_samples = 5      # number of samples printed
+        self.val_freq = 4             # frequency of validation - assign high value to accelerate training
+        self.display_frequency = 8   # frequency of printing sample predictions - must be a multiple of val_freq
+        self.display_samples = 6      # number of samples printed
         self.log_dir = os.path.join('logs', str(datetime.now().strftime("%d%m%Y-%H%M%S")))  # Tensorboard logging
 
         # Model config

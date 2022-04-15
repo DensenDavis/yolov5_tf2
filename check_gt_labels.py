@@ -13,7 +13,7 @@ cfg = Configuration()
 
 
 def transform_labels(y_true):
-    # y_true: (batch_size, grid, grid, anchors, (x1, y1, x2, y2, obj, cls))
+    # y_true: (N, grid_x, grid_y, anchors, (x1, y1, x2, y2, obj, cls))
     true_box, true_obj, true_class_idx = tf.split(y_true, (4, 1, 1), axis=-1)
     true_class_idx = tf.one_hot(tf.cast(true_class_idx, dtype=tf.int32),cfg.num_classes, dtype=tf.float32)
     return true_box, true_obj, true_class_idx
@@ -44,6 +44,7 @@ def yolo_nms(outputs, classes):
     dscores = tf.squeeze(scores, axis=0)
     scores = tf.reduce_max(dscores,[1])
     bbox = tf.reshape(bbox,(-1,4))
+    bbox = tf.stack([bbox[...,1],bbox[...,0],bbox[...,3],bbox[...,2]], axis=1)
     classes = tf.argmax(dscores,1)
     selected_indices, selected_scores = tf.image.non_max_suppression_with_scores(
         boxes=bbox,
@@ -53,6 +54,7 @@ def yolo_nms(outputs, classes):
         score_threshold=0.1,
         soft_nms_sigma=0.5
     )
+    bbox = tf.stack([bbox[...,1],bbox[...,0],bbox[...,3],bbox[...,2]], axis=1)
     
     num_valid_nms_boxes = tf.shape(selected_indices)[0]
 
@@ -71,7 +73,7 @@ def yolo_nms(outputs, classes):
 
 
 def draw_gt_labels(dataset, num_batches=5):
-    pbar = tqdm(dataset.train_ds.take(num_batches))
+    pbar = tqdm(dataset.val_ds.take(num_batches))
     idx = 0
     for data_batches in pbar:
         for i in range(data_batches[0].shape[0]):

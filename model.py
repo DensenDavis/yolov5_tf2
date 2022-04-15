@@ -99,7 +99,7 @@ class YOLOv5(tf.keras.Model):
         for i in range(cfg.num_strides):
             out_features[i] = self.convs[i](out_features[i])
             out_features[i] = self.reshape_layers[i](out_features[i])
-        return out_features
+        return out_features # scale low to high
 
 
 
