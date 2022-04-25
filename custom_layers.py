@@ -6,8 +6,8 @@ class Focus(layers.Layer):
         super(Focus, self).__init__(name="Focus", **kwargs)
         self.conv = Conv(filters, kernel_size, strides)
 
-    def call(self, x):
-        return self.conv(tf.nn.space_to_depth(x, 2))
+    def call(self, x,training=False):
+        return self.conv(tf.nn.space_to_depth(x, 2), training=training)
 
 
 class Conv(layers.Layer):
@@ -31,8 +31,9 @@ class Conv(layers.Layer):
                            kernel_initializer=tf.random_normal_initializer(stddev=0.01),
                            kernel_regularizer=tf.keras.regularizers.L2(5e-4))
 
-    def call(self, x):
-        return self.activation(self.bn(self.conv(x)))
+    def call(self, x, training=False):
+        return self.activation(self.bn(self.conv(x), training=training))
+        
 
 class Bottleneck(layers.Layer):
     def __init__(self, filters, shortcut=True, expansion=0.5):
@@ -41,10 +42,10 @@ class Bottleneck(layers.Layer):
         self.conv2 = Conv(filters, 3, 1)
         self.shortcut = shortcut
 
-    def call(self, x):
+    def call(self, x, training=False):
         if self.shortcut:
-            return x + self.conv2(self.conv1(x))
-        return self.conv2(self.conv1(x))
+            return x + self.conv2(self.conv1(x, training=training), training=training)
+        return self.conv2(self.conv1(x, training=training), training=training)
 
 
 class BottleneckCSP(layers.Layer):
@@ -59,10 +60,10 @@ class BottleneckCSP(layers.Layer):
         self.activation = layers.Activation(tf.keras.activations.swish)
         self.modules = tf.keras.Sequential([Bottleneck(filters_e, shortcut, expansion=1.0) for _ in range(n_layer)])
 
-    def call(self, x):
-        y1 = self.conv3(self.modules(self.conv1(x)))
-        y2 = self.conv2(x)
-        return self.conv4(self.activation(self.bn(tf.concat([y1, y2], axis=-1))))
+    def call(self, x, training=False):
+        y1 = self.conv3(self.modules(self.conv1(x, training=training), training=training), training=training)
+        y2 = self.conv2(x, training=training)
+        return self.conv4(self.activation(self.bn(tf.concat([y1, y2], axis=-1), training=training)), training=training) 
 
 class SPP(layers.Layer):
     #  YOLOv3 Spatial pyramid pooling
@@ -75,6 +76,6 @@ class SPP(layers.Layer):
         in_channels = input_shape[-1]
         self.conv1 = Conv(in_channels//2, 1, 1)
 
-    def call(self, inputs):
-        x = self.conv1(inputs)
-        return self.conv2(tf.concat([x] + [pool(x) for pool in self.max_pools], axis=-1))
+    def call(self, inputs, training=False):
+        x = self.conv1(inputs, training=False)
+        return self.conv2(tf.concat([x] + [pool(x) for pool in self.max_pools], axis=-1), training=training)

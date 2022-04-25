@@ -19,16 +19,16 @@ class YOLOv5r5Backbone(tf.keras.Model):
         self.spp = SPP(width * 1024)   
 
     def call(self, inputs, training=False):
-        x = self.focus(inputs)
-        x = self.conv1(x)
-        x = self.csp1(x)
-        x = self.conv2(x)
-        out_1 = x = self.csp2(x)
-        x = self.conv3(x)
-        out_2 = x = self.csp3(x)
-        x = self.conv4(x)
-        x = self.spp(x)
-        out_3 = x = self.csp4(x)
+        x = self.focus(inputs, training=training)
+        x = self.conv1(x, training=training)
+        x = self.csp1(x, training=training)
+        x = self.conv2(x, training=training)
+        out_1 = x = self.csp2(x, training=training)
+        x = self.conv3(x, training=training)
+        out_2 = x = self.csp3(x, training=training)
+        x = self.conv4(x, training=training)
+        x = self.spp(x, training=training)
+        out_3 = x = self.csp4(x, training=training)
         return [out_1,out_2,out_3] # resolution high to low
 
 class YOLOv5r5Head(tf.keras.Model):
@@ -55,23 +55,23 @@ class YOLOv5r5Head(tf.keras.Model):
     def call(self, inputs, training=False):
         bbf_1, bbf_2, bbf_3 = inputs # backbone features
 
-        x1 = x = self.conv1(bbf_3)
+        x1 = x = self.conv1(bbf_3, training=training)
         x = self.upsample1(x)
         x = self.concat1([x,bbf_2])
-        x = self.csp1(x)
+        x = self.csp1(x, training=training)
 
-        x2 = x = self.conv2(x)
+        x2 = x = self.conv2(x, training=training)
         x = self.upsample2(x)
         x = self.concat2([x,bbf_1])
-        out_1 = x = self.csp2(x)
+        out_1 = x = self.csp2(x, training=training)
 
-        x = self.conv3(x)
+        x = self.conv3(x, training=training)
         x = self.concat3([x,x2])
-        out_2 = x = self.csp3(x)
+        out_2 = x = self.csp3(x, training=training)
 
-        x = self.conv4(x)
+        x = self.conv4(x, training=training)
         x = self.concat4([x,x1])
-        out_3 = x = self.csp4(x)
+        out_3 = x = self.csp4(x, training=training)
         return [out_1, out_2, out_3] # resolution high to low
 
 class YOLOv5(tf.keras.Model):
@@ -95,11 +95,11 @@ class YOLOv5(tf.keras.Model):
 
     def call(self, image, training=False):
         backbone_features = self.backbone(image, training=training)
-        out_features = self.head(backbone_features)
+        out_features = self.head(backbone_features, training=training)
         for i in range(cfg.num_strides):
-            out_features[i] = self.convs[i](out_features[i])
+            out_features[i] = self.convs[i](out_features[i], training=training)
             out_features[i] = self.reshape_layers[i](out_features[i])
-        return out_features # scale low to high
+        return out_features # gride points 52x52 to 13x13
 
 
 

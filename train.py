@@ -11,6 +11,7 @@ from utils import clone_checkpoint
 from tensorflow.keras.optimizers.schedules import PiecewiseConstantDecay as lr_decay
 cfg = Configuration()
 
+
 dataset = Dataset()
 lr_schedule = lr_decay(
     boundaries=[i*dataset.num_train_batches for i in cfg.lr_boundaries],
@@ -19,14 +20,12 @@ lr_schedule = lr_decay(
 model = YOLOv5('s')
 _ = model(tf.random.normal((cfg.train_batch_size,cfg.train_img_size,cfg.train_img_size,3),dtype=tf.dtypes.float32), training=True)
 print(model.summary())
-optimizer = tf.keras.optimizers.Adam(lr_schedule)
-tb_writer = tf.summary.create_file_writer(cfg.log_dir)
-train_obj = TrainLoop(dataset, model, optimizer)
 
+model.optimizer = tf.keras.optimizers.Adam(lr_schedule)
+tb_writer = tf.summary.create_file_writer(cfg.log_dir)
+train_obj = TrainLoop(dataset, model)
 ckpt = tf.train.Checkpoint(
     model = train_obj.model,
-    optimizer = train_obj.optimizer,
-    train_dataset=train_obj.dataset.train_ds,
     epoch = tf.Variable(0, dtype=tf.dtypes.int64),
     map = tf.Variable(0.0))
 

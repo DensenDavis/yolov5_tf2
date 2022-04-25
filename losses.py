@@ -5,7 +5,7 @@ cfg = Configuration()
 
 class YOLOLoss(tf.losses.Loss):
     def __init__(self, anchors):
-        super(YOLOLoss, self).__init__(reduction="none", name="YOLOLoss")
+        super(YOLOLoss, self).__init__(reduction="none")
         self.anchors = tf.constant(anchors)
 
     def _meshgrid(self, n_a, n_b):
@@ -108,5 +108,4 @@ class YOLOLoss(tf.losses.Loss):
         wh_loss = tf.reduce_sum(wh_loss, axis=(1, 2, 3))
         obj_loss = tf.reduce_sum(obj_loss, axis=(1, 2, 3))
         class_loss = tf.reduce_sum(class_loss, axis=(1, 2, 3))
-
         return xy_loss + wh_loss + obj_loss + class_loss

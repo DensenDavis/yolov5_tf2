@@ -10,10 +10,9 @@ from config import Configuration
 cfg = Configuration()
 
 class TrainLoop():
-    def __init__(self, dataset, model, optimizer):
+    def __init__(self, dataset, model):
         self.dataset = dataset
         self.model = model
-        self.optimizer = optimizer
         self.stride_losses = [YOLOLoss(cfg.yolo_anchors[mask]) for mask in cfg.yolo_anchor_masks]
         self.mean_train_loss = tf.keras.metrics.Mean(name='mean_train_loss')
         self.mean_val_loss = tf.keras.metrics.Mean(name='val_loss')
@@ -22,7 +21,7 @@ class TrainLoop():
     def calculate_loss(self, y_true, y_pred):
         net_loss = 0.0
         for i in range(cfg.num_strides):
-            net_loss += self.stride_losses[i](y_true[i],y_pred[cfg.num_strides-1-i])
+            net_loss += tf.math.reduce_sum(self.stride_losses[i](y_true[i],y_pred[cfg.num_strides-1-i]))
         return net_loss
 
     @tf.function
@@ -31,7 +30,7 @@ class TrainLoop():
             output_batch = self.model(input_batch, training=True)
             net_loss = self.calculate_loss(gt_batch, output_batch)
         gradients = tape.gradient(net_loss, self.model.trainable_weights)
-        self.optimizer.apply_gradients(zip(gradients, self.model.trainable_weights))
+        self.model.optimizer.apply_gradients(zip(gradients, self.model.trainable_weights))
         self.mean_train_loss(net_loss)
         return
 
@@ -43,7 +42,7 @@ class TrainLoop():
             self.train_step(input_batch, gt_batch)
         return
 
-    # @tf.function
+    @tf.function
     def val_step(self, input_batch, gt_batch):
         output_batch = self.model(input_batch, training=False)
         net_loss = self.calculate_loss(gt_batch, output_batch)

@@ -17,7 +17,7 @@ def decode_labels(labels):
 
 def decode_images(image):
     image = tf.image.decode_jpeg(image,channels=3)
-    image = tf.cast(image,tf.float32)
+    image = tf.cast(image,tf.float32)/255.0
     return image
 
 def pad_to_fixed_size(image,labels):
@@ -53,8 +53,8 @@ def resize_and_pad(img, labels):
     img_resized = tf.image.resize(img, [nh, nw], method=tf.image.ResizeMethod.BICUBIC, preserve_aspect_ratio=False,antialias=True)
     dh, dw = (target_h - nh) // 2, (target_w - nw) // 2
 
-    x_pad = tf.cast(tf.fill([nh,dw,3],value=128), tf.float32)
-    y_pad = tf.cast(tf.fill([dh,target_w,3],value=128), tf.float32)
+    x_pad = tf.cast(tf.fill([nh,dw,3],value=0), tf.float32)
+    y_pad = tf.cast(tf.fill([dh,target_w,3],value=0), tf.float32)
     img_paded = tf.concat([x_pad, img_resized,x_pad], axis = 1)
     img_paded = tf.concat([y_pad, img_paded,y_pad], axis = 0)
 
